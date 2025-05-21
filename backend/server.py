@@ -289,7 +289,7 @@ async def update_travel_offer(
     
     # Update fields that are provided
     update_data = {k: v for k, v in offer_update.dict().items() if v is not None}
-    update_data["updated_at"] = datetime.utcnow()
+    update_data["updated_at"] = datetime.utcnow().isoformat()
     
     db.travel_offers.update_one(
         {"id": offer_id},
