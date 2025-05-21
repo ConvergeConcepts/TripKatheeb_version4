@@ -72,9 +72,19 @@ class AdminUser(AdminUserBase):
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat()}
 
+class BaseConfig:
+    """Base configuration for Pydantic models"""
+    json_encoders = {
+        datetime: lambda dt: dt.isoformat()
+    }
+    populate_by_name = True
+
 class TravelDateRange(BaseModel):
-    start_date: datetime
-    end_date: datetime
+    start_date: str
+    end_date: str
+    
+    class Config(BaseConfig):
+        pass
 
 class TravelOfferBase(BaseModel):
     title: str
