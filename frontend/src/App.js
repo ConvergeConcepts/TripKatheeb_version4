@@ -31,36 +31,49 @@ const Navbar = () => {
   );
 };
 
-// Travel Offer Card Component
 const OfferCard = ({ offer }) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    // If dateString is already in ISO format with T or contains +
+    // Example: 2025-09-10T00:00:00+00:00
+    if (dateString.includes('T') || dateString.includes('+')) {
+      return new Date(dateString).toLocaleDateString();
+    }
+    
+    // If dateString is just a date string like "2025-09-10"
+    return new Date(dateString).toLocaleDateString();
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 offer-card" data-testid="offer-card">
       <div className="relative h-48 sm:h-64">
         <img
-          src={offer.images[0] || "https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"}
+          src={offer.images?.[0] || "https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"}
           alt={offer.title}
           className="w-full h-full object-cover"
+          data-testid="offer-image"
         />
-        <div className="absolute top-0 right-0 bg-teal-500 text-white px-3 py-1 m-2 rounded-md">
+        <div className="absolute top-0 right-0 bg-teal-500 text-white px-3 py-1 m-2 rounded-md" data-testid="offer-price">
           ${offer.price}
         </div>
         <div className="absolute bottom-0 left-0 bg-gradient-to-t from-black to-transparent w-full p-3">
-          <span className="text-white text-xs uppercase font-semibold tracking-wider bg-blue-500 px-2 py-1 rounded">
+          <span className="text-white text-xs uppercase font-semibold tracking-wider bg-blue-500 px-2 py-1 rounded" data-testid="offer-category">
             {offer.category}
           </span>
         </div>
       </div>
       <div className="p-4">
-        <h3 className="text-lg font-bold mb-1">{offer.title}</h3>
-        <p className="text-gray-600 text-sm mb-2">
+        <h3 className="text-lg font-bold mb-1" data-testid="offer-title">{offer.title}</h3>
+        <p className="text-gray-600 text-sm mb-2" data-testid="offer-destination">
           <span className="font-medium text-gray-800">Destination:</span> {offer.destination}
         </p>
-        <p className="text-gray-600 text-sm mb-2">
+        <p className="text-gray-600 text-sm mb-2" data-testid="offer-dates">
           <span className="font-medium text-gray-800">Dates:</span>{" "}
-          {new Date(offer.travel_dates.start_date).toLocaleDateString()} to{" "}
-          {new Date(offer.travel_dates.end_date).toLocaleDateString()}
+          {formatDate(offer.travel_dates?.start_date)} to{" "}
+          {formatDate(offer.travel_dates?.end_date)}
         </p>
-        <p className="text-gray-600 text-sm mb-4">
+        <p className="text-gray-600 text-sm mb-4" data-testid="offer-company">
           <span className="font-medium text-gray-800">Company:</span> {offer.company_name}
         </p>
         <div className="flex justify-between items-center">
@@ -69,12 +82,14 @@ const OfferCard = ({ offer }) => {
             target="_blank"
             rel="noopener noreferrer"
             className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300"
+            data-testid="book-now-button"
           >
             Book Now
           </a>
           <button 
             className="text-teal-500 hover:text-teal-700"
             onClick={() => window.open(`/offers/${offer.id}`, '_blank')}
+            data-testid="view-details-button"
           >
             View Details
           </button>
