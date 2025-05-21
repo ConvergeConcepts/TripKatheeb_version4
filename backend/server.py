@@ -155,7 +155,35 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return user
 
 def parse_json(data):
-    return json.loads(json_util.dumps(data))
+    """
+    Convert MongoDB document to JSON serializable format.
+    Handle date objects explicitly.
+    """
+    def convert_dates(obj):
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if isinstance(value, dict) and "$date" in value:
+                    obj[key] = datetime.fromisoformat(value["$date"].replace("Z", "+00:00"))
+                elif isinstance(value, dict):
+                    convert_dates(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            convert_dates(item)
+        return obj
+    
+    # First convert to JSON format using bson.json_util
+    json_str = json_util.dumps(data)
+    parsed_data = json.loads(json_str)
+    
+    # Handle date objects
+    if isinstance(parsed_data, list):
+        for item in parsed_data:
+            convert_dates(item)
+    elif isinstance(parsed_data, dict):
+        convert_dates(parsed_data)
+    
+    return parsed_data
 
 # --- API Routes ---
 
