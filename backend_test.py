@@ -177,10 +177,6 @@ class MaldivesTravelAPITester:
         except Exception as e:
             print(f"❌ Failed - Error: {str(e)}")
             return False
-        if success and 'access_token' in response:
-            self.token = response['access_token']
-            print(f"Successfully logged in as admin")
-            return True
         return False
 
     def test_create_offer(self):
