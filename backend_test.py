@@ -177,7 +177,6 @@ class MaldivesTravelAPITester:
         except Exception as e:
             print(f"❌ Failed - Error: {str(e)}")
             return False
-        return False
 
     def test_create_offer(self):
         """Test creating a new travel offer"""
