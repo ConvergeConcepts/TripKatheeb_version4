@@ -228,7 +228,7 @@ async def get_travel_offers(
     offers = list(db.travel_offers.find(query).sort(sort_params))
     return parse_json(offers)
 
-@app.get("/api/offers/{offer_id}", response_model=TravelOffer)
+@app.get("/api/offers/{offer_id}")
 async def get_travel_offer(offer_id: str):
     offer = db.travel_offers.find_one({"id": offer_id})
     if offer is None:
