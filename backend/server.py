@@ -193,7 +193,7 @@ async def root():
 
 # Public Endpoints
 
-@app.get("/api/offers", response_model=List[TravelOffer])
+@app.get("/api/offers")
 async def get_travel_offers(
     destination: Optional[str] = None,
     category: Optional[str] = None,
