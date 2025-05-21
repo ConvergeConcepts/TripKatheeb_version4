@@ -102,11 +102,11 @@ class TravelOfferCreate(TravelOfferBase):
 
 class TravelOffer(TravelOfferBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    
+    class Config(BaseConfig):
+        pass
 
 class TravelOfferUpdate(BaseModel):
     title: Optional[str] = None
