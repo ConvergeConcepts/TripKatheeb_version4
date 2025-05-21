@@ -257,7 +257,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.post("/api/admin/offers", response_model=TravelOffer)
+@app.post("/api/admin/offers")
 async def create_travel_offer(offer: TravelOfferCreate, current_user: dict = Depends(get_current_user)):
     travel_offer = TravelOffer(**offer.dict())
     travel_offer_dict = travel_offer.dict()
