@@ -267,7 +267,7 @@ async def create_travel_offer(offer: TravelOfferCreate, current_user: dict = Dep
     
     return travel_offer
 
-@app.put("/api/admin/offers/{offer_id}", response_model=TravelOffer)
+@app.put("/api/admin/offers/{offer_id}")
 async def update_travel_offer(
     offer_id: str, 
     offer_update: TravelOfferUpdate, 
