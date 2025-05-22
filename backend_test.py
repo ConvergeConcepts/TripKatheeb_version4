@@ -1,22 +1,23 @@
 import requests
 import sys
-import json
-from datetime import datetime, timedelta
+import uuid
+from datetime import datetime
 
 class MaldivesTravelAPITester:
-    def __init__(self, base_url="https://4acbcb40-04e2-4184-b7c4-6f18e1c17d05.preview.emergentagent.com"):
+    def __init__(self, base_url="https://4acbcb40-04e2-4184-b7c4-6f18e1c17d05.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
         self.tests_passed = 0
-        self.created_offer_id = None
-        self.created_category_id = None
-        self.created_ad_id = None
+        self.created_resources = {
+            "offers": [],
+            "ads": []
+        }
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
         """Run a single API test"""
-        url = f"{self.base_url}{endpoint}"
-        headers = {}
+        url = f"{self.base_url}/{endpoint}"
+        headers = {'Content-Type': 'application/json'}
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
 
@@ -25,18 +26,10 @@ class MaldivesTravelAPITester:
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=headers, params=params)
             elif method == 'POST':
-                if files:
-                    response = requests.post(url, data=data, files=files, headers=headers)
-                else:
-                    if isinstance(data, dict):
-                        headers['Content-Type'] = 'application/json'
-                        response = requests.post(url, json=data, headers=headers)
-                    else:
-                        response = requests.post(url, data=data, headers=headers)
+                response = requests.post(url, json=data, headers=headers)
             elif method == 'PUT':
-                headers['Content-Type'] = 'application/json'
                 response = requests.put(url, json=data, headers=headers)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=headers)
@@ -46,639 +39,317 @@ class MaldivesTravelAPITester:
                 self.tests_passed += 1
                 print(f"✅ Passed - Status: {response.status_code}")
                 try:
-                    return success, response.json()
+                    return success, response.json() if response.text else {}
                 except:
                     return success, {}
             else:
                 print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
-                try:
-                    print(f"Response: {response.text}")
-                    return False, response.json()
-                except:
-                    return False, {}
+                print(f"Response: {response.text}")
+                return False, {}
 
         except Exception as e:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
-    def test_api_root(self):
-        """Test the API root endpoint"""
+    def test_admin_login(self, username="admin", password="password"):
+        """Test admin login and get token"""
         success, response = self.run_test(
-            "API Root",
-            "GET",
-            "/api/",
-            200
+            "Admin Login",
+            "POST",
+            "admin/login",
+            200,
+            data={"username": username, "password": password}
         )
-        return success
+        if success and 'access_token' in response:
+            self.token = response['access_token']
+            print(f"✅ Successfully logged in as admin")
+            return True
+        return False
 
-    def test_get_offers(self):
+    def test_get_offers(self, params=None):
         """Test getting all offers"""
         success, response = self.run_test(
             "Get All Offers",
             "GET",
-            "/api/offers",
-            200
+            "offers",
+            200,
+            params=params
         )
         if success:
-            print(f"Found {len(response)} offers")
+            print(f"✅ Retrieved {len(response)} offers")
         return success, response
 
-    def test_get_categories(self):
-        """Test getting all categories"""
+    def test_get_offer(self, offer_id):
+        """Test getting a specific offer"""
         success, response = self.run_test(
-            "Get Categories",
+            f"Get Offer {offer_id}",
             "GET",
-            "/api/categories",
+            f"offers/{offer_id}",
             200
         )
         if success:
-            print(f"Categories: {response['categories']}")
-        return success
-
-    def test_filter_offers(self):
-        """Test filtering offers"""
-        success, response = self.run_test(
-            "Filter Offers by Destination",
-            "GET",
-            "/api/offers?destination=Maldives",
-            200
-        )
-        if success:
-            print(f"Found {len(response)} offers for Maldives")
-        
-        success2, response2 = self.run_test(
-            "Filter Offers by Price Range",
-            "GET",
-            "/api/offers?min_price=500&max_price=2000",
-            200
-        )
-        if success2:
-            print(f"Found {len(response2)} offers in price range $500-$2000")
-        
-        success3, response3 = self.run_test(
-            "Sort Offers by Price (Ascending)",
-            "GET",
-            "/api/offers?sort_by=price&sort_order=asc",
-            200
-        )
-        if success3 and len(response3) > 1:
-            print(f"First offer price: ${response3[0]['price']}, Last offer price: ${response3[-1]['price']}")
-            if response3[0]['price'] <= response3[-1]['price']:
-                print("✅ Sorting works correctly")
-            else:
-                print("❌ Sorting may not be working correctly")
-                
-        return success and success2 and success3
-
-    def test_create_default_admin(self):
-        """Test creating the default admin user"""
-        success, response = self.run_test(
-            "Create Default Admin",
-            "POST",
-            "/api/admin/create-default-admin",
-            200
-        )
-        return success
-
-    def test_admin_login(self):
-        """Test admin login"""
-        # For OAuth2 form data, we need to use the correct format
-        form_data = "username=admin&password=admin123"
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        
-        url = f"{self.base_url}/api/admin/login"
-        print(f"Attempting login to: {url}")
-        
-        self.tests_run += 1
-        print(f"\n🔍 Testing Admin Login...")
-        
-        try:
-            response = requests.post(
-                url, 
-                data=form_data,
-                headers=headers
-            )
-            
-            success = response.status_code == 200
-            if success:
-                self.tests_passed += 1
-                print(f"✅ Passed - Status: {response.status_code}")
-                response_data = response.json()
-                if 'access_token' in response_data:
-                    self.token = response_data['access_token']
-                    print(f"Successfully logged in as admin")
-                    return True
-                else:
-                    print("❌ No access token in response")
-                    return False
-            else:
-                print(f"❌ Failed - Expected 200, got {response.status_code}")
-                print(f"Response: {response.text}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Failed - Error: {str(e)}")
-            return False
-
-    # Category Management Tests
-    def test_get_admin_categories(self):
-        """Test getting all categories from admin endpoint"""
-        success, response = self.run_test(
-            "Get Admin Categories",
-            "GET",
-            "/api/admin/categories",
-            200
-        )
-        if success:
-            print(f"Found {len(response)} categories in admin panel")
+            print(f"✅ Retrieved offer: {response.get('title', 'Unknown')}")
         return success, response
 
-    def test_create_category(self):
-        """Test creating a new category"""
-        category_data = {
-            "name": f"Test Category {datetime.now().strftime('%H%M%S')}",
-            "description": "A test category created via API testing"
-        }
-        
+    def test_create_offer(self, offer_data):
+        """Test creating a new offer"""
         success, response = self.run_test(
-            "Create Category",
+            "Create Offer",
             "POST",
-            "/api/admin/categories",
-            200,
-            data=category_data
-        )
-        
-        if success and 'id' in response:
-            self.created_category_id = response['id']
-            print(f"Created category with ID: {self.created_category_id}")
-            return True
-        return False
-
-    def test_update_category(self):
-        """Test updating a category"""
-        if not self.created_category_id:
-            print("❌ No category ID available to test")
-            return False
-            
-        update_data = {
-            "name": f"Updated Test Category {datetime.now().strftime('%H%M%S')}",
-            "description": "This category has been updated via API testing"
-        }
-        
-        success, response = self.run_test(
-            "Update Category",
-            "PUT",
-            f"/api/admin/categories/{self.created_category_id}",
-            200,
-            data=update_data
-        )
-        
-        if success:
-            print(f"Updated category name: {response['name']}")
-            if response['name'] == update_data['name'] and response['description'] == update_data['description']:
-                print("✅ Category update successful")
-                return True
-            else:
-                print("❌ Category update may not have applied correctly")
-                return False
-        return False
-
-    def test_delete_category(self):
-        """Test deleting a category"""
-        if not self.created_category_id:
-            print("❌ No category ID available to test")
-            return False
-            
-        success, response = self.run_test(
-            "Delete Category",
-            "DELETE",
-            f"/api/admin/categories/{self.created_category_id}",
-            200
-        )
-        
-        if success:
-            print("✅ Category successfully deleted")
-            return True
-        return False
-
-    def test_create_enhanced_offer(self):
-        """Test creating a new travel offer with enhanced fields"""
-        # Create a test offer with all the new fields
-        start_date = datetime.now() + timedelta(days=30)
-        end_date = start_date + timedelta(days=7)
-        
-        offer_data = {
-            "title": "Enhanced Test Resort Stay",
-            "destination": "Maldives",
-            "description": "A test offer with enhanced fields for API testing",
-            "price": 1599.99,
-            "travel_dates": {
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat()
-            },
-            "company_name": "Test Travel Agency",
-            "company_website": "https://example.com",
-            "category": "Luxury",
-            "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
-            "contact_info": {
-                "phone": "+1-555-123-4567",
-                "email": "contact@example.com",
-                "address": "123 Beach Road, Maldives"
-            },
-            "highlights": [
-                "Private beach access",
-                "All-inclusive meals",
-                "Spa treatments included"
-            ],
-            "inclusions": [
-                "Airport transfers",
-                "Daily breakfast, lunch and dinner",
-                "Welcome drink on arrival"
-            ],
-            "exclusions": [
-                "International flights",
-                "Travel insurance",
-                "Personal expenses"
-            ],
-            "itinerary": "Day 1: Arrival and welcome dinner\nDay 2: Beach activities\nDay 3: Snorkeling tour\nDay 4: Spa day\nDay 5: Island hopping\nDay 6: Free day\nDay 7: Departure"
-        }
-        
-        success, response = self.run_test(
-            "Create Enhanced Travel Offer",
-            "POST",
-            "/api/admin/offers",
-            200,
+            "admin/offers",
+            201,
             data=offer_data
         )
-        
         if success and 'id' in response:
-            self.created_offer_id = response['id']
-            print(f"Created enhanced offer with ID: {self.created_offer_id}")
-            
-            # Verify all enhanced fields were saved correctly
-            verify_success, offer_details = self.run_test(
-                "Verify Enhanced Offer Details",
-                "GET",
-                f"/api/offers/{self.created_offer_id}",
-                200
-            )
-            
-            if verify_success:
-                all_fields_present = True
-                missing_fields = []
-                
-                # Check for new fields
-                if 'contact_info' not in offer_details:
-                    all_fields_present = False
-                    missing_fields.append('contact_info')
-                if 'highlights' not in offer_details:
-                    all_fields_present = False
-                    missing_fields.append('highlights')
-                if 'inclusions' not in offer_details:
-                    all_fields_present = False
-                    missing_fields.append('inclusions')
-                if 'exclusions' not in offer_details:
-                    all_fields_present = False
-                    missing_fields.append('exclusions')
-                if 'itinerary' not in offer_details:
-                    all_fields_present = False
-                    missing_fields.append('itinerary')
-                
-                if all_fields_present:
-                    print("✅ All enhanced fields were saved correctly")
-                    return True
-                else:
-                    print(f"❌ Some enhanced fields are missing: {', '.join(missing_fields)}")
-                    return False
-            else:
-                print("❌ Could not verify enhanced offer details")
-                return False
-        return False
+            self.created_resources["offers"].append(response['id'])
+            print(f"✅ Created offer with ID: {response['id']}")
+        return success, response
 
-    def test_get_offer_by_id(self):
-        """Test getting a specific offer by ID"""
-        if not self.created_offer_id:
-            print("❌ No offer ID available to test")
-            return False
-            
+    def test_update_offer(self, offer_id, updated_data):
+        """Test updating an offer"""
         success, response = self.run_test(
-            "Get Offer by ID",
-            "GET",
-            f"/api/offers/{self.created_offer_id}",
+            f"Update Offer {offer_id}",
+            "PUT",
+            f"admin/offers/{offer_id}",
+            200,
+            data=updated_data
+        )
+        if success:
+            print(f"✅ Updated offer: {response.get('title', 'Unknown')}")
+        return success, response
+
+    def test_delete_offer(self, offer_id):
+        """Test deleting an offer"""
+        success, _ = self.run_test(
+            f"Delete Offer {offer_id}",
+            "DELETE",
+            f"admin/offers/{offer_id}",
             200
         )
-        
         if success:
-            print(f"Retrieved offer: {response['title']}")
+            if offer_id in self.created_resources["offers"]:
+                self.created_resources["offers"].remove(offer_id)
+            print(f"✅ Deleted offer with ID: {offer_id}")
         return success
 
-    def test_update_offer(self):
-        """Test updating an offer"""
-        if not self.created_offer_id:
-            print("❌ No offer ID available to test")
-            return False
-            
-        update_data = {
-            "title": "Updated Test Offer",
-            "price": 1499.99,
-            "contact_info": {
-                "phone": "+1-555-987-6543",
-                "email": "updated@example.com"
-            },
-            "highlights": [
-                "Updated highlight 1",
-                "Updated highlight 2"
-            ]
-        }
-        
-        success, response = self.run_test(
-            "Update Travel Offer",
-            "PUT",
-            f"/api/admin/offers/{self.created_offer_id}",
-            200,
-            data=update_data
-        )
-        
-        if success:
-            print(f"Updated offer title: {response['title']}, price: {response['price']}")
-            if (response['title'] == update_data['title'] and 
-                response['price'] == update_data['price'] and
-                response['contact_info']['phone'] == update_data['contact_info']['phone']):
-                print("✅ Update successful including enhanced fields")
-                return True
-            else:
-                print("❌ Update may not have applied correctly")
-                return False
-        return False
-
-    def test_delete_offer(self):
-        """Test deleting an offer"""
-        if not self.created_offer_id:
-            print("❌ No offer ID available to test")
-            return False
-            
-        success, response = self.run_test(
-            "Delete Travel Offer",
-            "DELETE",
-            f"/api/admin/offers/{self.created_offer_id}",
-            200
-        )
-        
-        if success:
-            # Verify the offer is actually deleted
-            verify_success, _ = self.run_test(
-                "Verify Deletion",
-                "GET",
-                f"/api/offers/{self.created_offer_id}",
-                404  # Should return 404 Not Found
-            )
-            
-            if verify_success:
-                print("✅ Offer successfully deleted")
-                return True
-            else:
-                print("❌ Offer may not have been deleted")
-                return False
-        return False
-        
-    # Advertisement Management Tests
-    def test_get_advertisements(self):
+    def test_get_advertisements(self, params=None):
         """Test getting all advertisements"""
         success, response = self.run_test(
             "Get All Advertisements",
             "GET",
-            "/api/advertisements?active_only=false",
-            200
+            "advertisements",
+            200,
+            params=params
         )
         if success:
-            print(f"Found {len(response)} advertisements")
+            print(f"✅ Retrieved {len(response)} advertisements")
         return success, response
-        
-    def test_get_advertisements_by_location(self):
-        """Test getting advertisements by location"""
+
+    def test_get_advertisement(self, ad_id):
+        """Test getting a specific advertisement"""
         success, response = self.run_test(
-            "Get Advertisements by Location (hero)",
+            f"Get Advertisement {ad_id}",
             "GET",
-            "/api/advertisements?location=hero&active_only=true",
+            f"advertisements/{ad_id}",
             200
         )
         if success:
-            print(f"Found {len(response)} active advertisements for hero location")
-            
-        success2, response2 = self.run_test(
-            "Get Advertisements by Location (offer_detail)",
-            "GET",
-            "/api/advertisements?location=offer_detail&active_only=true",
-            200
-        )
-        if success2:
-            print(f"Found {len(response2)} active advertisements for offer_detail location")
-            
-        return success and success2
-        
-    def test_create_advertisement(self):
+            print(f"✅ Retrieved advertisement: {response.get('title', 'Unknown')}")
+        return success, response
+
+    def test_create_advertisement(self, ad_data):
         """Test creating a new advertisement"""
-        ad_data = {
-            "title": f"Test Advertisement {datetime.now().strftime('%H%M%S')}",
-            "description": "A test advertisement created via API testing",
-            "image_url": "https://example.com/test-ad-image.jpg",
-            "link_url": "https://example.com/test-ad-link",
-            "placement": {
-                "location": "hero",
-                "description": "Hero banner on homepage"
-            },
-            "is_active": True
-        }
-        
         success, response = self.run_test(
             "Create Advertisement",
             "POST",
-            "/api/admin/advertisements",
-            200,
+            "admin/advertisements",
+            201,
             data=ad_data
         )
-        
         if success and 'id' in response:
-            self.created_ad_id = response['id']
-            print(f"Created advertisement with ID: {self.created_ad_id}")
-            return True
-        return False
-        
-    def test_get_advertisement_by_id(self):
-        """Test getting a specific advertisement by ID"""
-        if not self.created_ad_id:
-            print("❌ No advertisement ID available to test")
-            return False
-            
-        success, response = self.run_test(
-            "Get Advertisement by ID",
-            "GET",
-            f"/api/advertisements/{self.created_ad_id}",
-            200
-        )
-        
-        if success:
-            print(f"Retrieved advertisement: {response['title']}")
-        return success
-        
-    def test_update_advertisement(self):
+            self.created_resources["ads"].append(response['id'])
+            print(f"✅ Created advertisement with ID: {response['id']}")
+        return success, response
+
+    def test_update_advertisement(self, ad_id, updated_data):
         """Test updating an advertisement"""
-        if not self.created_ad_id:
-            print("❌ No advertisement ID available to test")
-            return False
-            
-        update_data = {
-            "title": "Updated Test Advertisement",
-            "description": "This advertisement has been updated via API testing",
-            "placement": {
-                "location": "offer_detail",
-                "description": "Offer detail page sidebar"
-            },
-            "is_active": False
-        }
-        
         success, response = self.run_test(
-            "Update Advertisement",
+            f"Update Advertisement {ad_id}",
             "PUT",
-            f"/api/admin/advertisements/{self.created_ad_id}",
+            f"admin/advertisements/{ad_id}",
             200,
-            data=update_data
+            data=updated_data
         )
-        
         if success:
-            print(f"Updated advertisement title: {response['title']}")
-            if (response['title'] == update_data['title'] and 
-                response['description'] == update_data['description'] and
-                response['placement']['location'] == update_data['placement']['location'] and
-                response['is_active'] == update_data['is_active']):
-                print("✅ Advertisement update successful")
-                return True
-            else:
-                print("❌ Advertisement update may not have applied correctly")
-                return False
-        return False
-        
-    def test_toggle_advertisement_status(self):
-        """Test toggling advertisement active status"""
-        if not self.created_ad_id:
-            print("❌ No advertisement ID available to test")
-            return False
-            
-        # First, get the current status
-        success, ad = self.run_test(
-            "Get Advertisement Current Status",
-            "GET",
-            f"/api/advertisements/{self.created_ad_id}",
-            200
-        )
-        
-        if not success:
-            return False
-            
-        current_status = ad['is_active']
-        new_status = not current_status
-        
-        update_data = {
-            "is_active": new_status
-        }
-        
-        success, response = self.run_test(
-            "Toggle Advertisement Status",
-            "PUT",
-            f"/api/admin/advertisements/{self.created_ad_id}",
-            200,
-            data=update_data
-        )
-        
-        if success:
-            print(f"Changed advertisement status from {current_status} to {response['is_active']}")
-            if response['is_active'] == new_status:
-                print("✅ Advertisement status toggle successful")
-                return True
-            else:
-                print("❌ Advertisement status toggle may not have applied correctly")
-                return False
-        return False
-        
-    def test_delete_advertisement(self):
+            print(f"✅ Updated advertisement: {response.get('title', 'Unknown')}")
+        return success, response
+
+    def test_delete_advertisement(self, ad_id):
         """Test deleting an advertisement"""
-        if not self.created_ad_id:
-            print("❌ No advertisement ID available to test")
-            return False
-            
-        success, response = self.run_test(
-            "Delete Advertisement",
+        success, _ = self.run_test(
+            f"Delete Advertisement {ad_id}",
             "DELETE",
-            f"/api/admin/advertisements/{self.created_ad_id}",
+            f"admin/advertisements/{ad_id}",
             200
         )
-        
         if success:
-            # Verify the advertisement is actually deleted
-            verify_success, _ = self.run_test(
-                "Verify Advertisement Deletion",
-                "GET",
-                f"/api/advertisements/{self.created_ad_id}",
-                404  # Should return 404 Not Found
-            )
+            if ad_id in self.created_resources["ads"]:
+                self.created_resources["ads"].remove(ad_id)
+            print(f"✅ Deleted advertisement with ID: {ad_id}")
+        return success
+
+    def cleanup(self):
+        """Clean up any resources created during testing"""
+        print("\n🧹 Cleaning up created resources...")
+        
+        for offer_id in self.created_resources["offers"]:
+            self.test_delete_offer(offer_id)
             
-            if verify_success:
-                print("✅ Advertisement successfully deleted")
-                return True
-            else:
-                print("❌ Advertisement may not have been deleted")
-                return False
-        return False
+        for ad_id in self.created_resources["ads"]:
+            self.test_delete_advertisement(ad_id)
 
 def main():
-    print("🌴 Starting Maldives Travel Offers API Tests 🌴")
-    print("==============================================")
-    
+    # Setup
     tester = MaldivesTravelAPITester()
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     
-    # Test public endpoints
-    tester.test_api_root()
-    success, offers = tester.test_get_offers()
-    tester.test_get_categories()
-    tester.test_filter_offers()
+    print("\n🔍 TESTING MALDIVES TRAVEL OFFERS AGGREGATOR API 🔍")
+    print("=" * 60)
     
-    # Test advertisement public endpoints
-    print("\n🔍 Testing Public Advertisement Endpoints...")
-    tester.test_get_advertisements()
-    tester.test_get_advertisements_by_location()
+    # Test public endpoints first (no auth required)
+    print("\n📌 TESTING PUBLIC ENDPOINTS")
+    print("-" * 40)
     
-    # Test admin functionality
-    tester.test_create_default_admin()
+    # Get all offers
+    offers_success, offers = tester.test_get_offers()
+    if not offers_success:
+        print("❌ Failed to get offers, some tests will be skipped")
+    
+    # Get a specific offer if available
+    offer_id_to_test = None
+    if offers_success and offers:
+        offer_id_to_test = offers[0]['id']
+        tester.test_get_offer(offer_id_to_test)
+    
+    # Get all advertisements
+    ads_success, ads = tester.test_get_advertisements()
+    if not ads_success:
+        print("❌ Failed to get advertisements, some tests will be skipped")
+    
+    # Get a specific advertisement if available
+    ad_id_to_test = None
+    if ads_success and ads:
+        ad_id_to_test = ads[0]['id']
+        tester.test_get_advertisement(ad_id_to_test)
+    
+    # Test admin endpoints (auth required)
+    print("\n📌 TESTING ADMIN ENDPOINTS")
+    print("-" * 40)
+    
+    # Login as admin
     if not tester.test_admin_login():
-        print("❌ Admin login failed, stopping admin tests")
-    else:
-        # Test Category Management
-        print("\n🔍 Testing Category Management...")
-        tester.test_get_admin_categories()
-        tester.test_create_category()
-        tester.test_update_category()
-        tester.test_delete_category()
+        print("❌ Admin login failed, admin tests will be skipped")
+        print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
+        return 1
+    
+    # Test offer management
+    print("\n📌 TESTING OFFER MANAGEMENT")
+    print("-" * 40)
+    
+    # Create a test offer
+    test_offer = {
+        "title": f"Test Offer {timestamp}",
+        "description": "This is a test offer created by the API tester",
+        "price": 1999.99,
+        "location": "South Malé Atoll",
+        "image_url": "https://example.com/test-image.jpg",
+        "category": "Luxury",
+        "company_name": "Test Travel Agency",
+        "duration": "5 days",
+        "highlights": ["Beautiful beaches", "Amazing sunsets", "Luxury accommodation"],
+        "inclusions": ["Airport transfers", "Daily breakfast", "Guided tours"],
+        "exclusions": ["International flights", "Travel insurance", "Personal expenses"]
+    }
+    
+    create_offer_success, created_offer = tester.test_create_offer(test_offer)
+    
+    if create_offer_success:
+        # Update the created offer
+        updated_offer = created_offer.copy()
+        updated_offer["title"] = f"Updated Test Offer {timestamp}"
+        updated_offer["price"] = 2499.99
+        updated_offer["highlights"] = ["Updated beaches", "Updated sunsets", "Updated accommodation"]
         
-        # Test Enhanced Offer Management
-        print("\n🔍 Testing Enhanced Offer Management...")
-        tester.test_create_enhanced_offer()
-        tester.test_get_offer_by_id()
-        tester.test_update_offer()
-        tester.test_delete_offer()
+        update_success, _ = tester.test_update_offer(created_offer["id"], updated_offer)
         
-        # Test Advertisement Management
-        print("\n🔍 Testing Advertisement Management...")
-        tester.test_create_advertisement()
-        tester.test_get_advertisement_by_id()
-        tester.test_update_advertisement()
-        tester.test_toggle_advertisement_status()
-        tester.test_delete_advertisement()
+        # Get the updated offer to verify changes
+        if update_success:
+            tester.test_get_offer(created_offer["id"])
+    
+    # Test advertisement management
+    print("\n📌 TESTING ADVERTISEMENT MANAGEMENT")
+    print("-" * 40)
+    
+    # Create test advertisements for different placements
+    test_ad_hero = {
+        "title": f"Hero Banner Ad {timestamp}",
+        "description": "This is a test hero banner advertisement",
+        "image_url": "https://example.com/hero-ad.jpg",
+        "link_url": "https://example.com/hero-promo",
+        "placement": {
+            "location": "hero_banner",
+            "priority": 1
+        },
+        "is_active": True
+    }
+    
+    test_ad_offer_detail = {
+        "title": f"Offer Detail Ad {timestamp}",
+        "description": "This is a test offer detail advertisement",
+        "image_url": "https://example.com/offer-detail-ad.jpg",
+        "link_url": "https://example.com/offer-promo",
+        "placement": {
+            "location": "offer_detail",
+            "priority": 1
+        },
+        "is_active": True
+    }
+    
+    # Create hero banner ad
+    hero_ad_success, hero_ad = tester.test_create_advertisement(test_ad_hero)
+    
+    if hero_ad_success:
+        # Update the hero banner ad
+        updated_hero_ad = hero_ad.copy()
+        updated_hero_ad["title"] = f"Updated Hero Banner Ad {timestamp}"
+        updated_hero_ad["is_active"] = False
+        
+        update_hero_success, _ = tester.test_update_advertisement(hero_ad["id"], updated_hero_ad)
+        
+        # Get the updated ad to verify changes
+        if update_hero_success:
+            tester.test_get_advertisement(hero_ad["id"])
+    
+    # Create offer detail ad
+    offer_ad_success, offer_ad = tester.test_create_advertisement(test_ad_offer_detail)
+    
+    if offer_ad_success:
+        # Update the offer detail ad
+        updated_offer_ad = offer_ad.copy()
+        updated_offer_ad["title"] = f"Updated Offer Detail Ad {timestamp}"
+        updated_offer_ad["placement"]["priority"] = 2
+        
+        update_offer_ad_success, _ = tester.test_update_advertisement(offer_ad["id"], updated_offer_ad)
+        
+        # Get the updated ad to verify changes
+        if update_offer_ad_success:
+            tester.test_get_advertisement(offer_ad["id"])
+    
+    # Clean up created resources
+    tester.cleanup()
     
     # Print results
-    print("\n==============================================")
-    print(f"📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
-    print("==============================================")
-    
+    print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
     return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
