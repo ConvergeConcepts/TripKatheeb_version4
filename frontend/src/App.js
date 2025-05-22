@@ -537,6 +537,8 @@ const Home = () => {
     sortBy: "created_at",
     sortOrder: "desc",
   });
+  const [heroAds, setHeroAds] = useState([]);
+  const [adLoading, setAdLoading] = useState(true);
 
   useEffect(() => {
     const fetchOffers = async () => {
