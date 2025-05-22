@@ -362,7 +362,18 @@ const OfferDetail = () => {
             <div className="md:col-span-2">
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">Trip Overview</h2>
-                <p className="text-gray-700">{offer.description}</p>
+                <p className="text-gray-700 mb-4">{offer.description}</p>
+                
+                {/* Full-size image display */}
+                {offer.images && offer.images.length > 0 && (
+                  <div className="mt-4 mb-6">
+                    <img
+                      src={offer.images[0]}
+                      alt={offer.title}
+                      className="w-full rounded-lg shadow-md"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Highlights */}
