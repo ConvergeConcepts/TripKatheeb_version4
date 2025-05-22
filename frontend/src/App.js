@@ -1739,11 +1739,10 @@ const AddOfferForm = ({ onClose, onSuccess }) => {
   );
 };
 
-// Main App Component
 function App() {
   return (
     <div className="App min-h-screen bg-gray-50">
-      <BrowserRouter>
+      <BrowserRouter basename="/">
         <Routes>
           <Route
             path="/"
@@ -1766,6 +1765,18 @@ function App() {
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/offers/edit/:id" element={<AdminDashboard />} />
+          <Route path="*" element={
+            <>
+              <Navbar />
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+                <h2 className="text-2xl font-bold text-gray-900">Page Not Found</h2>
+                <p className="mt-2 text-gray-600">The page you're looking for doesn't exist.</p>
+                <Link to="/" className="mt-4 inline-block text-teal-600 hover:text-teal-800">
+                  &larr; Back to Home
+                </Link>
+              </div>
+            </>
+          } />
         </Routes>
       </BrowserRouter>
     </div>
