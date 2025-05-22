@@ -1041,8 +1041,10 @@ const AdminDashboard = () => {
                 )}
               </div>
             )
-          ) : (
+          ) : activeTab === "categories" ? (
             <CategoryManagement />
+          ) : (
+            <AdManagement />
           )}
         </div>
       </div>
