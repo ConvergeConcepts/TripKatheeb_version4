@@ -1052,6 +1052,511 @@ const AdminDashboard = () => {
   );
 };
 
+// Ad Management Component
+const AdManagement = () => {
+  const [advertisements, setAdvertisements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+
+  // Predefined ad placement locations
+  const adLocations = [
+    { value: "hero", label: "Hero Banner (Home)" },
+    { value: "sidebar", label: "Sidebar (All Pages)" },
+    { value: "offer_detail", label: "Offer Detail Page" },
+    { value: "footer", label: "Footer (All Pages)" }
+  ];
+
+  useEffect(() => {
+    const fetchAdvertisements = async () => {
+      const token = localStorage.getItem("accessToken");
+      try {
+        // Get all ads (including inactive ones) for admin view
+        const response = await axios.get(`${API}/advertisements?active_only=false`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setAdvertisements(response.data);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching advertisements:", error);
+        setError("Failed to load advertisements");
+        setLoading(false);
+      }
+    };
+
+    fetchAdvertisements();
+  }, []);
+
+  const handleAddAdvertisement = async (adData) => {
+    const token = localStorage.getItem("accessToken");
+    try {
+      const response = await axios.post(`${API}/admin/advertisements`, adData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      setAdvertisements([...advertisements, response.data]);
+      setShowAddForm(false);
+      return true;
+    } catch (error) {
+      console.error("Error adding advertisement:", error);
+      return false;
+    }
+  };
+
+  const handleUpdateAdvertisement = async (adId, adData) => {
+    const token = localStorage.getItem("accessToken");
+    try {
+      const response = await axios.put(`${API}/admin/advertisements/${adId}`, adData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      setAdvertisements(advertisements.map(ad => 
+        ad.id === adId ? response.data : ad
+      ));
+      
+      setShowEditForm(null);
+      return true;
+    } catch (error) {
+      console.error("Error updating advertisement:", error);
+      return false;
+    }
+  };
+
+  const handleDeleteAdvertisement = async (adId) => {
+    const token = localStorage.getItem("accessToken");
+    try {
+      await axios.delete(`${API}/admin/advertisements/${adId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setAdvertisements(advertisements.filter(ad => ad.id !== adId));
+      setShowDeleteConfirm(null);
+      return true;
+    } catch (error) {
+      console.error("Error deleting advertisement:", error);
+      return false;
+    }
+  };
+
+  const toggleAdStatus = async (ad) => {
+    const token = localStorage.getItem("accessToken");
+    try {
+      const response = await axios.put(`${API}/admin/advertisements/${ad.id}`, 
+        { is_active: !ad.is_active },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+      
+      setAdvertisements(advertisements.map(item => 
+        item.id === ad.id ? response.data : item
+      ));
+      
+      return true;
+    } catch (error) {
+      console.error("Error toggling ad status:", error);
+      return false;
+    }
+  };
+
+  const AdForm = ({ initialData, onSubmit, onCancel, isEdit }) => {
+    const [formData, setFormData] = useState({
+      title: initialData?.title || "",
+      description: initialData?.description || "",
+      image_url: initialData?.image_url || "",
+      link_url: initialData?.link_url || "",
+      location: initialData?.placement?.location || "hero",
+      location_description: initialData?.placement?.description || "",
+      is_active: initialData?.is_active !== undefined ? initialData.is_active : true
+    });
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e) => {
+      const { name, value, type, checked } = e.target;
+      setFormData({ 
+        ...formData, 
+        [name]: type === 'checkbox' ? checked : value 
+      });
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      setError("");
+
+      if (!formData.title.trim() || !formData.image_url.trim() || !formData.link_url.trim()) {
+        setError("Title, image URL, and link URL are required");
+        setLoading(false);
+        return;
+      }
+
+      // Format data for API
+      const adData = {
+        title: formData.title,
+        description: formData.description || undefined,
+        image_url: formData.image_url,
+        link_url: formData.link_url,
+        placement: {
+          location: formData.location,
+          description: formData.location_description || undefined
+        },
+        is_active: formData.is_active
+      };
+
+      const success = await onSubmit(adData);
+      if (!success) {
+        setError("Failed to save advertisement.");
+      }
+      setLoading(false);
+    };
+
+    return (
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            {isEdit ? "Edit Advertisement" : "Add New Advertisement"}
+          </h3>
+          <button
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            &times;
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Advertisement Title
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows="2"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+            ></textarea>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Image URL
+            </label>
+            <input
+              type="url"
+              name="image_url"
+              value={formData.image_url}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Enter the URL of the advertisement image</p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Link URL
+            </label>
+            <input
+              type="url"
+              name="link_url"
+              value={formData.link_url}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Where should users be directed when they click the ad?</p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ad Placement
+            </label>
+            <select
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              required
+            >
+              {adLocations.map((loc) => (
+                <option key={loc.value} value={loc.value}>
+                  {loc.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Placement Description
+            </label>
+            <input
+              type="text"
+              name="location_description"
+              value={formData.location_description}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              placeholder="e.g., Top position, Right sidebar"
+            />
+          </div>
+
+          <div className="mb-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="is_active"
+                checked={formData.is_active}
+                onChange={handleChange}
+                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+              />
+              <label className="ml-2 block text-sm text-gray-700">
+                Active (advertisement will be displayed on the site)
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`px-4 py-2 border border-transparent rounded-md text-white ${
+                loading
+                  ? "bg-teal-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600"
+              }`}
+            >
+              {loading ? "Saving..." : isEdit ? "Update" : "Add Advertisement"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  };
+
+  const getLocationLabel = (locationValue) => {
+    const location = adLocations.find(loc => loc.value === locationValue);
+    return location ? location.label : locationValue;
+  };
+
+  return (
+    <div>
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-lg font-bold text-gray-900">Advertisement Management</h2>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600"
+          >
+            Add New Advertisement
+          </button>
+        </div>
+
+        {showAddForm && (
+          <AdForm
+            onSubmit={handleAddAdvertisement}
+            onCancel={() => setShowAddForm(false)}
+            isEdit={false}
+          />
+        )}
+
+        {showEditForm && (
+          <AdForm
+            initialData={advertisements.find(ad => ad.id === showEditForm)}
+            onSubmit={(data) => handleUpdateAdvertisement(showEditForm, data)}
+            onCancel={() => setShowEditForm(null)}
+            isEdit={true}
+          />
+        )}
+
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        ) : advertisements.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No advertisements found. Add your first advertisement!</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Image
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Placement
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {advertisements.map((ad) => (
+                  <tr key={ad.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {ad.title}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <img 
+                        src={ad.image_url} 
+                        alt={ad.title} 
+                        className="h-12 w-24 object-cover rounded" 
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getLocationLabel(ad.placement.location)}
+                      {ad.placement.description && (
+                        <p className="text-xs text-gray-400">{ad.placement.description}</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => toggleAdStatus(ad)}
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          ad.is_active 
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {ad.is_active ? "Active" : "Inactive"}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-4">
+                        <button
+                          onClick={() => setShowEditForm(ad.id)}
+                          className="text-teal-600 hover:text-teal-900"
+                        >
+                          Edit
+                        </button>
+                        {showDeleteConfirm === ad.id ? (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleDeleteAdvertisement(ad.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(null)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowDeleteConfirm(ad.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Preview Section */}
+      <div className="bg-white shadow rounded-lg p-6 mt-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Ad Placement Preview</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {adLocations.map((location) => {
+            const adsForLocation = advertisements.filter(
+              ad => ad.is_active && ad.placement.location === location.value
+            );
+            
+            return (
+              <div key={location.value} className="border rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">{location.label}</h4>
+                {adsForLocation.length === 0 ? (
+                  <div className="bg-gray-100 rounded-lg p-4 text-center text-gray-500">
+                    No active ads for this location
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {adsForLocation.map((ad) => (
+                      <div key={ad.id} className="border rounded-lg overflow-hidden">
+                        <img 
+                          src={ad.image_url} 
+                          alt={ad.title} 
+                          className="w-full h-32 object-cover" 
+                        />
+                        <div className="p-2">
+                          <p className="font-medium text-sm">{ad.title}</p>
+                          {ad.description && (
+                            <p className="text-xs text-gray-500">{ad.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Category Management Component
 const CategoryManagement = () => {
   const [categories, setCategories] = useState([]);
