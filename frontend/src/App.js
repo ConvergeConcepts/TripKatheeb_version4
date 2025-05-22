@@ -265,6 +265,8 @@ const OfferDetail = () => {
   const [offer, setOffer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [detailAds, setDetailAds] = useState([]);
+  const [adLoading, setAdLoading] = useState(true);
 
   useEffect(() => {
     const fetchOffer = async () => {
