@@ -617,17 +617,48 @@ const Home = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Advertisement Banner */}
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-lg mb-8 shadow-md">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="mb-4 md:mb-0">
-              <h3 className="text-xl font-bold text-white">Special Promotion!</h3>
-              <p className="text-white">Get 10% off on selected destinations. Limited time offer.</p>
+        {!adLoading && heroAds.length > 0 && (
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-lg mb-8 shadow-md">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="flex items-center mb-4 md:mb-0">
+                {heroAds[0].image_url && (
+                  <img 
+                    src={heroAds[0].image_url} 
+                    alt={heroAds[0].title}
+                    className="h-16 w-24 object-cover rounded-md mr-4 hidden md:block"
+                  />
+                )}
+                <div>
+                  <h3 className="text-xl font-bold text-white">{heroAds[0].title}</h3>
+                  <p className="text-white">{heroAds[0].description}</p>
+                </div>
+              </div>
+              <a 
+                href={heroAds[0].link_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white text-orange-500 hover:bg-gray-100 font-bold py-2 px-6 rounded-full"
+              >
+                Learn More
+              </a>
             </div>
-            <button className="bg-white text-orange-500 hover:bg-gray-100 font-bold py-2 px-6 rounded-full">
-              Learn More
-            </button>
           </div>
-        </div>
+        )}
+
+        {/* Fallback Promotion Banner (if no ads available) */}
+        {(adLoading || heroAds.length === 0) && (
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-lg mb-8 shadow-md">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="mb-4 md:mb-0">
+                <h3 className="text-xl font-bold text-white">Special Promotion!</h3>
+                <p className="text-white">Get 10% off on selected destinations. Limited time offer.</p>
+              </div>
+              <button className="bg-white text-orange-500 hover:bg-gray-100 font-bold py-2 px-6 rounded-full">
+                Learn More
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <FilterBar onFilterChange={handleFilterChange} />
