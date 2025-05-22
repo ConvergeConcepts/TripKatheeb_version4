@@ -72,20 +72,21 @@ class MaldivesTravelAPITester:
                 self.tests_passed += 1
                 print(f"✅ Passed - Status: {response.status_code}")
                 response_data = response.json()
-                return success, response_data
+                if 'access_token' in response_data:
+                    self.token = response_data['access_token']
+                    print(f"✅ Successfully logged in as admin")
+                    return True
+                else:
+                    print("❌ No access token in response")
+                    return False
             else:
                 print(f"❌ Failed - Expected 200, got {response.status_code}")
                 print(f"Response: {response.text}")
-                return False, {}
+                return False
                 
         except Exception as e:
             print(f"❌ Failed - Error: {str(e)}")
-            return False, {}
-        if success and 'access_token' in response:
-            self.token = response['access_token']
-            print(f"✅ Successfully logged in as admin")
-            return True
-        return False
+            return False
 
     def test_get_offers(self, params=None):
         """Test getting all offers"""
