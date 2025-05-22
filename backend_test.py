@@ -301,7 +301,10 @@ def main():
         "duration": "5 days",
         "highlights": ["Beautiful beaches", "Amazing sunsets", "Luxury accommodation"],
         "inclusions": ["Airport transfers", "Daily breakfast", "Guided tours"],
-        "exclusions": ["International flights", "Travel insurance", "Personal expenses"]
+        "exclusions": ["International flights", "Travel insurance", "Personal expenses"],
+        "destination": "Maldives",
+        "travel_dates": "June 2025",
+        "company_website": "https://example.com/travel-agency"
     }
     
     create_offer_success, created_offer = tester.test_create_offer(test_offer)
