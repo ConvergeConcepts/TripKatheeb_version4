@@ -545,6 +545,7 @@ async def startup_db_client():
     db.create_collection("admin_users", check_exists=False)
     db.create_collection("travel_offers", check_exists=False)
     db.create_collection("categories", check_exists=False)
+    db.create_collection("advertisements", check_exists=False)
     
     # Create indexes
     db.travel_offers.create_index("id", unique=True)
@@ -555,6 +556,10 @@ async def startup_db_client():
     db.admin_users.create_index("username", unique=True)
     db.categories.create_index("id", unique=True)
     db.categories.create_index("name", unique=True)
+    
+    db.advertisements.create_index("id", unique=True)
+    db.advertisements.create_index("placement.location")
+    db.advertisements.create_index("is_active")
     
     logger.info("Connected to MongoDB")
 
