@@ -1347,7 +1347,27 @@ const AddOfferForm = ({ onClose, onSuccess }) => {
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`${API}/categories`);
+        // First try to get admin categories
+        const token = localStorage.getItem("accessToken");
+        let response;
+        
+        if (token) {
+          try {
+            response = await axios.get(`${API}/admin/categories`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            // If admin categories exist, use their names
+            if (response.data && response.data.length > 0) {
+              setCategories(response.data.map(cat => cat.name));
+              return;
+            }
+          } catch (err) {
+            console.log("Falling back to public categories endpoint");
+          }
+        }
+        
+        // Fallback to public categories endpoint
+        response = await axios.get(`${API}/categories`);
         setCategories(response.data.categories || []);
       } catch (error) {
         console.error("Error fetching categories:", error);
