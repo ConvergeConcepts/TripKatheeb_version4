@@ -10,6 +10,7 @@ class MaldivesTravelAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.created_offer_id = None
+        self.created_category_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
         """Run a single API test"""
@@ -178,17 +179,98 @@ class MaldivesTravelAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False
 
-    def test_create_offer(self):
-        """Test creating a new travel offer"""
-        # Create a test offer
+    # Category Management Tests
+    def test_get_admin_categories(self):
+        """Test getting all categories from admin endpoint"""
+        success, response = self.run_test(
+            "Get Admin Categories",
+            "GET",
+            "/api/admin/categories",
+            200
+        )
+        if success:
+            print(f"Found {len(response)} categories in admin panel")
+        return success, response
+
+    def test_create_category(self):
+        """Test creating a new category"""
+        category_data = {
+            "name": f"Test Category {datetime.now().strftime('%H%M%S')}",
+            "description": "A test category created via API testing"
+        }
+        
+        success, response = self.run_test(
+            "Create Category",
+            "POST",
+            "/api/admin/categories",
+            200,
+            data=category_data
+        )
+        
+        if success and 'id' in response:
+            self.created_category_id = response['id']
+            print(f"Created category with ID: {self.created_category_id}")
+            return True
+        return False
+
+    def test_update_category(self):
+        """Test updating a category"""
+        if not self.created_category_id:
+            print("❌ No category ID available to test")
+            return False
+            
+        update_data = {
+            "name": f"Updated Test Category {datetime.now().strftime('%H%M%S')}",
+            "description": "This category has been updated via API testing"
+        }
+        
+        success, response = self.run_test(
+            "Update Category",
+            "PUT",
+            f"/api/admin/categories/{self.created_category_id}",
+            200,
+            data=update_data
+        )
+        
+        if success:
+            print(f"Updated category name: {response['name']}")
+            if response['name'] == update_data['name'] and response['description'] == update_data['description']:
+                print("✅ Category update successful")
+                return True
+            else:
+                print("❌ Category update may not have applied correctly")
+                return False
+        return False
+
+    def test_delete_category(self):
+        """Test deleting a category"""
+        if not self.created_category_id:
+            print("❌ No category ID available to test")
+            return False
+            
+        success, response = self.run_test(
+            "Delete Category",
+            "DELETE",
+            f"/api/admin/categories/{self.created_category_id}",
+            200
+        )
+        
+        if success:
+            print("✅ Category successfully deleted")
+            return True
+        return False
+
+    def test_create_enhanced_offer(self):
+        """Test creating a new travel offer with enhanced fields"""
+        # Create a test offer with all the new fields
         start_date = datetime.now() + timedelta(days=30)
         end_date = start_date + timedelta(days=7)
         
         offer_data = {
-            "title": "Test Luxury Resort Stay",
+            "title": "Enhanced Test Resort Stay",
             "destination": "Maldives",
-            "description": "A test offer for API testing purposes",
-            "price": 1299.99,
+            "description": "A test offer with enhanced fields for API testing",
+            "price": 1599.99,
             "travel_dates": {
                 "start_date": start_date.isoformat(),
                 "end_date": end_date.isoformat()
@@ -196,21 +278,80 @@ class MaldivesTravelAPITester:
             "company_name": "Test Travel Agency",
             "company_website": "https://example.com",
             "category": "Luxury",
-            "images": ["https://example.com/image.jpg"]
+            "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
+            "contact_info": {
+                "phone": "+1-555-123-4567",
+                "email": "contact@example.com",
+                "address": "123 Beach Road, Maldives"
+            },
+            "highlights": [
+                "Private beach access",
+                "All-inclusive meals",
+                "Spa treatments included"
+            ],
+            "inclusions": [
+                "Airport transfers",
+                "Daily breakfast, lunch and dinner",
+                "Welcome drink on arrival"
+            ],
+            "exclusions": [
+                "International flights",
+                "Travel insurance",
+                "Personal expenses"
+            ],
+            "itinerary": "Day 1: Arrival and welcome dinner\nDay 2: Beach activities\nDay 3: Snorkeling tour\nDay 4: Spa day\nDay 5: Island hopping\nDay 6: Free day\nDay 7: Departure"
         }
         
         success, response = self.run_test(
-            "Create Travel Offer",
+            "Create Enhanced Travel Offer",
             "POST",
             "/api/admin/offers",
-            200,  # The API returns 200 instead of 201
+            200,
             data=offer_data
         )
         
         if success and 'id' in response:
             self.created_offer_id = response['id']
-            print(f"Created offer with ID: {self.created_offer_id}")
-            return True
+            print(f"Created enhanced offer with ID: {self.created_offer_id}")
+            
+            # Verify all enhanced fields were saved correctly
+            verify_success, offer_details = self.run_test(
+                "Verify Enhanced Offer Details",
+                "GET",
+                f"/api/offers/{self.created_offer_id}",
+                200
+            )
+            
+            if verify_success:
+                all_fields_present = True
+                missing_fields = []
+                
+                # Check for new fields
+                if 'contact_info' not in offer_details:
+                    all_fields_present = False
+                    missing_fields.append('contact_info')
+                if 'highlights' not in offer_details:
+                    all_fields_present = False
+                    missing_fields.append('highlights')
+                if 'inclusions' not in offer_details:
+                    all_fields_present = False
+                    missing_fields.append('inclusions')
+                if 'exclusions' not in offer_details:
+                    all_fields_present = False
+                    missing_fields.append('exclusions')
+                if 'itinerary' not in offer_details:
+                    all_fields_present = False
+                    missing_fields.append('itinerary')
+                
+                if all_fields_present:
+                    print("✅ All enhanced fields were saved correctly")
+                    return True
+                else:
+                    print(f"❌ Some enhanced fields are missing: {', '.join(missing_fields)}")
+                    return False
+            else:
+                print("❌ Could not verify enhanced offer details")
+                return False
         return False
 
     def test_get_offer_by_id(self):
@@ -238,7 +379,15 @@ class MaldivesTravelAPITester:
             
         update_data = {
             "title": "Updated Test Offer",
-            "price": 1499.99
+            "price": 1499.99,
+            "contact_info": {
+                "phone": "+1-555-987-6543",
+                "email": "updated@example.com"
+            },
+            "highlights": [
+                "Updated highlight 1",
+                "Updated highlight 2"
+            ]
         }
         
         success, response = self.run_test(
@@ -251,8 +400,10 @@ class MaldivesTravelAPITester:
         
         if success:
             print(f"Updated offer title: {response['title']}, price: {response['price']}")
-            if response['title'] == update_data['title'] and response['price'] == update_data['price']:
-                print("✅ Update successful")
+            if (response['title'] == update_data['title'] and 
+                response['price'] == update_data['price'] and
+                response['contact_info']['phone'] == update_data['contact_info']['phone']):
+                print("✅ Update successful including enhanced fields")
                 return True
             else:
                 print("❌ Update may not have applied correctly")
@@ -306,8 +457,16 @@ def main():
     if not tester.test_admin_login():
         print("❌ Admin login failed, stopping admin tests")
     else:
-        # Test CRUD operations
-        tester.test_create_offer()
+        # Test Category Management
+        print("\n🔍 Testing Category Management...")
+        tester.test_get_admin_categories()
+        tester.test_create_category()
+        tester.test_update_category()
+        tester.test_delete_category()
+        
+        # Test Enhanced Offer Management
+        print("\n🔍 Testing Enhanced Offer Management...")
+        tester.test_create_enhanced_offer()
         tester.test_get_offer_by_id()
         tester.test_update_offer()
         tester.test_delete_offer()
