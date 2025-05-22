@@ -1002,7 +1002,7 @@ const AdminDashboard = () => {
                                 <button 
                                   className="text-teal-600 hover:text-teal-900"
                                   data-testid="edit-offer-button"
-                                  onClick={() => navigate(`/admin/offers/edit/${offer.id}`)}
+                                  onClick={() => setShowEditForm(offer.id)}
                                 >
                                   Edit
                                 </button>
