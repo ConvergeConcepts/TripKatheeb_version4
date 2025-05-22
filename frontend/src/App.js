@@ -270,6 +270,7 @@ const OfferDetail = () => {
     const fetchOffer = async () => {
       try {
         const response = await axios.get(`${API}/offers/${id}`);
+        console.log("Offer data received:", response.data);
         setOffer(response.data);
         setLoading(false);
       } catch (error) {
