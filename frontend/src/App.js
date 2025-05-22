@@ -896,6 +896,16 @@ const AdminDashboard = () => {
               >
                 Categories
               </button>
+              <button
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === "ads"
+                    ? "border-b-2 border-teal-500 text-teal-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveTab("ads")}
+              >
+                Ad Spaces
+              </button>
             </div>
           </div>
 
