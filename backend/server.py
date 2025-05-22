@@ -441,6 +441,73 @@ async def delete_travel_offer(offer_id: str, current_user: dict = Depends(get_cu
     
     return {"message": "Travel offer deleted successfully"}
 
+# Advertisement Management Endpoints
+@app.get("/api/advertisements")
+async def get_advertisements(location: Optional[str] = None, active_only: bool = True):
+    """Get advertisements, optionally filtered by location and active status"""
+    query = {}
+    
+    if location:
+        query["placement.location"] = location
+        
+    if active_only:
+        query["is_active"] = True
+        
+    ads = list(db.advertisements.find(query))
+    return parse_json(ads)
+
+@app.get("/api/advertisements/{ad_id}")
+async def get_advertisement(ad_id: str):
+    """Get a specific advertisement by ID"""
+    ad = db.advertisements.find_one({"id": ad_id})
+    if ad is None:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+    return parse_json(ad)
+
+@app.post("/api/admin/advertisements")
+async def create_advertisement(ad: AdvertisementCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new advertisement (admin only)"""
+    advertisement = Advertisement(**ad.dict())
+    advertisement_dict = advertisement.dict()
+    
+    # Save to database
+    db.advertisements.insert_one(advertisement_dict)
+    
+    return advertisement
+
+@app.put("/api/admin/advertisements/{ad_id}")
+async def update_advertisement(
+    ad_id: str, 
+    ad_update: AdvertisementUpdate, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an existing advertisement (admin only)"""
+    existing_ad = db.advertisements.find_one({"id": ad_id})
+    if existing_ad is None:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+    
+    # Update fields that are provided
+    update_data = {k: v for k, v in ad_update.dict(exclude_unset=True).items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow().isoformat()
+    
+    db.advertisements.update_one(
+        {"id": ad_id},
+        {"$set": update_data}
+    )
+    
+    updated_ad = db.advertisements.find_one({"id": ad_id})
+    return parse_json(updated_ad)
+
+@app.delete("/api/admin/advertisements/{ad_id}")
+async def delete_advertisement(ad_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete an advertisement (admin only)"""
+    result = db.advertisements.delete_one({"id": ad_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Advertisement not found")
+    
+    return {"message": "Advertisement deleted successfully"}
+
 @app.post("/api/admin/upload")
 async def upload_image(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     contents = await file.read()
