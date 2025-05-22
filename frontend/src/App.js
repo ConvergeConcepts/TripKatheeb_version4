@@ -1330,6 +1330,498 @@ const CategoryManagement = () => {
 };
 
 // Add Offer Form Component
+const EditOfferForm = ({ offerId, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    destination: "",
+    description: "",
+    price: "",
+    category: "",
+    company_name: "",
+    company_website: "",
+    start_date: "",
+    end_date: "",
+    image_url: "",
+    contact_phone: "",
+    contact_email: "",
+    contact_address: "",
+    highlights: "",
+    inclusions: "",
+    exclusions: "",
+    itinerary: ""
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    // Fetch offer data
+    const fetchOfferData = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          setError("Authentication required");
+          setLoading(false);
+          return;
+        }
+
+        const response = await axios.get(`${API}/offers/${offerId}`);
+        const offer = response.data;
+        
+        // Format the data for the form
+        setFormData({
+          title: offer.title || "",
+          destination: offer.destination || "",
+          description: offer.description || "",
+          price: offer.price?.toString() || "",
+          category: offer.category || "",
+          company_name: offer.company_name || "",
+          company_website: offer.company_website || "",
+          start_date: offer.travel_dates?.start_date ? offer.travel_dates.start_date.split('T')[0] : "",
+          end_date: offer.travel_dates?.end_date ? offer.travel_dates.end_date.split('T')[0] : "",
+          image_url: offer.images && offer.images.length > 0 ? offer.images[0] : "",
+          contact_phone: offer.contact_info?.phone || "",
+          contact_email: offer.contact_info?.email || "",
+          contact_address: offer.contact_info?.address || "",
+          highlights: offer.highlights ? offer.highlights.join('\n') : "",
+          inclusions: offer.inclusions ? offer.inclusions.join('\n') : "",
+          exclusions: offer.exclusions ? offer.exclusions.join('\n') : "",
+          itinerary: offer.itinerary || ""
+        });
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching offer data:", error);
+        setError("Failed to load offer data");
+        setLoading(false);
+      }
+    };
+
+    // Fetch categories
+    const fetchCategories = async () => {
+      try {
+        // First try to get admin categories
+        const token = localStorage.getItem("accessToken");
+        let response;
+        
+        if (token) {
+          try {
+            response = await axios.get(`${API}/admin/categories`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            // If admin categories exist, use their names
+            if (response.data && response.data.length > 0) {
+              setCategories(response.data.map(cat => cat.name));
+              return;
+            }
+          } catch (err) {
+            console.log("Falling back to public categories endpoint");
+          }
+        }
+        
+        // Fallback to public categories endpoint
+        response = await axios.get(`${API}/categories`);
+        setCategories(response.data.categories || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+    fetchOfferData();
+  }, [offerId]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      
+      // Convert comma-separated strings to arrays
+      const highlights = formData.highlights ? formData.highlights.split('\n').filter(item => item.trim()) : [];
+      const inclusions = formData.inclusions ? formData.inclusions.split('\n').filter(item => item.trim()) : [];
+      const exclusions = formData.exclusions ? formData.exclusions.split('\n').filter(item => item.trim()) : [];
+      
+      const offerData = {
+        title: formData.title,
+        destination: formData.destination,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        travel_dates: {
+          start_date: formData.start_date,
+          end_date: formData.end_date
+        },
+        company_name: formData.company_name,
+        company_website: formData.company_website,
+        category: formData.category,
+        images: formData.image_url ? [formData.image_url] : [],
+        contact_info: {
+          phone: formData.contact_phone || undefined,
+          email: formData.contact_email || undefined,
+          address: formData.contact_address || undefined
+        },
+        highlights,
+        inclusions,
+        exclusions,
+        itinerary: formData.itinerary || undefined
+      };
+
+      const response = await axios.put(`${API}/admin/offers/${offerId}`, offerData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      onSuccess(response.data);
+    } catch (error) {
+      console.error("Error updating offer:", error);
+      setError("Failed to update offer. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && !error) {
+    return (
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-lg font-bold text-gray-900">Edit Travel Offer</h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          &times; Close
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6" data-testid="edit-offer-form">
+        <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Title
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="title-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Destination
+            </label>
+            <input
+              type="text"
+              name="destination"
+              value={formData.destination}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="destination-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price
+            </label>
+            <input
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              required
+              min="0"
+              step="0.01"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="price-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="category-input"
+            >
+              <option value="">Select a category</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Start Date
+            </label>
+            <input
+              type="date"
+              name="start_date"
+              value={formData.start_date}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="start-date-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              End Date
+            </label>
+            <input
+              type="date"
+              name="end_date"
+              value={formData.end_date}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="end-date-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Company Name
+            </label>
+            <input
+              type="text"
+              name="company_name"
+              value={formData.company_name}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="company-name-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Company Website
+            </label>
+            <input
+              type="url"
+              name="company_website"
+              value={formData.company_website}
+              onChange={handleChange}
+              required
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              data-testid="company-website-input"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Image URL
+          </label>
+          <input
+            type="url"
+            name="image_url"
+            value={formData.image_url}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+            data-testid="image-url-input"
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            rows="4"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+            data-testid="description-input"
+          ></textarea>
+        </div>
+
+        <h3 className="text-lg font-medium text-gray-900 border-b pb-2 pt-4">Contact Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              name="contact_phone"
+              value={formData.contact_phone}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              placeholder="+1 123 456 7890"
+              data-testid="phone-input"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="contact_email"
+              value={formData.contact_email}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              placeholder="contact@example.com"
+              data-testid="email-input"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Address
+          </label>
+          <input
+            type="text"
+            name="contact_address"
+            value={formData.contact_address}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+            placeholder="123 Main St, City, Country"
+            data-testid="address-input"
+          />
+        </div>
+
+        <h3 className="text-lg font-medium text-gray-900 border-b pb-2 pt-4">Additional Information</h3>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Highlights (one per line)
+          </label>
+          <textarea
+            name="highlights"
+            value={formData.highlights}
+            onChange={handleChange}
+            rows="3"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+            placeholder="Visit the Eiffel Tower&#10;Explore the Louvre Museum&#10;Cruise on the Seine River"
+            data-testid="highlights-input"
+          ></textarea>
+          <p className="text-xs text-gray-500 mt-1">Enter each highlight on a new line</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Inclusions (one per line)
+            </label>
+            <textarea
+              name="inclusions"
+              value={formData.inclusions}
+              onChange={handleChange}
+              rows="3"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              placeholder="Hotel accommodations&#10;Breakfast&#10;Airport transfers"
+              data-testid="inclusions-input"
+            ></textarea>
+            <p className="text-xs text-gray-500 mt-1">Enter each item on a new line</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Exclusions (one per line)
+            </label>
+            <textarea
+              name="exclusions"
+              value={formData.exclusions}
+              onChange={handleChange}
+              rows="3"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+              placeholder="Flights&#10;Travel insurance&#10;Personal expenses"
+              data-testid="exclusions-input"
+            ></textarea>
+            <p className="text-xs text-gray-500 mt-1">Enter each item on a new line</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Itinerary
+          </label>
+          <textarea
+            name="itinerary"
+            value={formData.itinerary}
+            onChange={handleChange}
+            rows="5"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+            placeholder="Day 1: Arrival and welcome dinner&#10;Day 2: City tour&#10;Day 3: Free day for exploration"
+            data-testid="itinerary-input"
+          ></textarea>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="mr-3 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`px-4 py-2 border border-transparent rounded-md text-white ${
+              loading
+                ? "bg-teal-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600"
+            }`}
+            data-testid="submit-offer-button"
+          >
+            {loading ? "Saving..." : "Update Offer"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 const AddOfferForm = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     title: "",
