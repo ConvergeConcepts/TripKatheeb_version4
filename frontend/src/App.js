@@ -281,8 +281,21 @@ const OfferDetail = () => {
         setLoading(false);
       }
     };
+    
+    const fetchDetailAds = async () => {
+      setAdLoading(true);
+      try {
+        const response = await axios.get(`${API}/advertisements?location=offer_detail&active_only=true`);
+        setDetailAds(response.data);
+        setAdLoading(false);
+      } catch (error) {
+        console.error("Error fetching detail page ads:", error);
+        setAdLoading(false);
+      }
+    };
 
     fetchOffer();
+    fetchDetailAds();
   }, [id]);
 
   if (loading) {
