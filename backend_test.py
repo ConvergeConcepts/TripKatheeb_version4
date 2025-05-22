@@ -642,6 +642,11 @@ def main():
     tester.test_get_categories()
     tester.test_filter_offers()
     
+    # Test advertisement public endpoints
+    print("\n🔍 Testing Public Advertisement Endpoints...")
+    tester.test_get_advertisements()
+    tester.test_get_advertisements_by_location()
+    
     # Test admin functionality
     tester.test_create_default_admin()
     if not tester.test_admin_login():
@@ -660,6 +665,14 @@ def main():
         tester.test_get_offer_by_id()
         tester.test_update_offer()
         tester.test_delete_offer()
+        
+        # Test Advertisement Management
+        print("\n🔍 Testing Advertisement Management...")
+        tester.test_create_advertisement()
+        tester.test_get_advertisement_by_id()
+        tester.test_update_advertisement()
+        tester.test_toggle_advertisement_status()
+        tester.test_delete_advertisement()
     
     # Print results
     print("\n==============================================")
