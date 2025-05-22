@@ -11,6 +11,7 @@ class MaldivesTravelAPITester:
         self.tests_passed = 0
         self.created_offer_id = None
         self.created_category_id = None
+        self.created_ad_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
         """Run a single API test"""
