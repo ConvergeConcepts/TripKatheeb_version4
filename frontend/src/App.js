@@ -801,7 +801,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showAdManager, setShowAdManager] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
