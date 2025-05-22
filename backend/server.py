@@ -79,9 +79,35 @@ class BaseConfig:
     }
     populate_by_name = True
 
+class CategoryBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class Category(CategoryBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    
+    class Config(BaseConfig):
+        pass
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
 class TravelDateRange(BaseModel):
     start_date: str
     end_date: str
+    
+    class Config(BaseConfig):
+        pass
+
+class ContactInfo(BaseModel):
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
     
     class Config(BaseConfig):
         pass
@@ -96,6 +122,11 @@ class TravelOfferBase(BaseModel):
     company_website: str
     category: str
     images: List[str] = []
+    contact_info: Optional[ContactInfo] = None
+    highlights: Optional[List[str]] = None
+    inclusions: Optional[List[str]] = None
+    exclusions: Optional[List[str]] = None
+    itinerary: Optional[str] = None
 
 class TravelOfferCreate(TravelOfferBase):
     pass
@@ -118,6 +149,11 @@ class TravelOfferUpdate(BaseModel):
     company_website: Optional[str] = None
     category: Optional[str] = None
     images: Optional[List[str]] = None
+    contact_info: Optional[ContactInfo] = None
+    highlights: Optional[List[str]] = None
+    inclusions: Optional[List[str]] = None
+    exclusions: Optional[List[str]] = None
+    itinerary: Optional[str] = None
 
 # --- Helper Functions ---
 
@@ -250,7 +286,72 @@ async def get_categories():
     categories = db.travel_offers.distinct("category")
     return {"categories": categories}
 
-# Admin Endpoints
+# Admin Endpoints - Category Management
+
+@app.get("/api/admin/categories")
+async def get_all_categories(current_user: dict = Depends(get_current_user)):
+    categories = list(db.categories.find())
+    return parse_json(categories)
+
+@app.post("/api/admin/categories")
+async def create_category(category: CategoryCreate, current_user: dict = Depends(get_current_user)):
+    # Check if category already exists
+    existing = db.categories.find_one({"name": category.name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Category with this name already exists")
+    
+    category_obj = Category(**category.dict())
+    category_dict = category_obj.dict()
+    
+    # Save to database
+    db.categories.insert_one(category_dict)
+    
+    return category_obj
+
+@app.put("/api/admin/categories/{category_id}")
+async def update_category(
+    category_id: str,
+    category_update: CategoryUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    existing = db.categories.find_one({"id": category_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    # Check if updating to a name that already exists
+    if category_update.name:
+        name_exists = db.categories.find_one({"name": category_update.name, "id": {"$ne": category_id}})
+        if name_exists:
+            raise HTTPException(status_code=400, detail="Category with this name already exists")
+    
+    update_data = {k: v for k, v in category_update.dict().items() if v is not None}
+    
+    db.categories.update_one(
+        {"id": category_id},
+        {"$set": update_data}
+    )
+    
+    updated_category = db.categories.find_one({"id": category_id})
+    return parse_json(updated_category)
+
+@app.delete("/api/admin/categories/{category_id}")
+async def delete_category(category_id: str, current_user: dict = Depends(get_current_user)):
+    # Check if category is being used by any offer
+    offers_using_category = db.travel_offers.find_one({"category": category_id})
+    if offers_using_category:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete category that is being used by travel offers"
+        )
+    
+    result = db.categories.delete_one({"id": category_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    return {"message": "Category deleted successfully"}
+
+# Admin Endpoints - Authentication and Offers
 
 @app.post("/api/admin/login", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -344,6 +445,7 @@ async def startup_db_client():
     # Create collections if they don't exist
     db.create_collection("admin_users", check_exists=False)
     db.create_collection("travel_offers", check_exists=False)
+    db.create_collection("categories", check_exists=False)
     
     # Create indexes
     db.travel_offers.create_index("id", unique=True)
@@ -352,6 +454,8 @@ async def startup_db_client():
     db.travel_offers.create_index("price")
     
     db.admin_users.create_index("username", unique=True)
+    db.categories.create_index("id", unique=True)
+    db.categories.create_index("name", unique=True)
     
     logger.info("Connected to MongoDB")
 
