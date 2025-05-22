@@ -440,6 +440,195 @@ class MaldivesTravelAPITester:
                 print("❌ Offer may not have been deleted")
                 return False
         return False
+        
+    # Advertisement Management Tests
+    def test_get_advertisements(self):
+        """Test getting all advertisements"""
+        success, response = self.run_test(
+            "Get All Advertisements",
+            "GET",
+            "/api/advertisements?active_only=false",
+            200
+        )
+        if success:
+            print(f"Found {len(response)} advertisements")
+        return success, response
+        
+    def test_get_advertisements_by_location(self):
+        """Test getting advertisements by location"""
+        success, response = self.run_test(
+            "Get Advertisements by Location (hero)",
+            "GET",
+            "/api/advertisements?location=hero&active_only=true",
+            200
+        )
+        if success:
+            print(f"Found {len(response)} active advertisements for hero location")
+            
+        success2, response2 = self.run_test(
+            "Get Advertisements by Location (offer_detail)",
+            "GET",
+            "/api/advertisements?location=offer_detail&active_only=true",
+            200
+        )
+        if success2:
+            print(f"Found {len(response2)} active advertisements for offer_detail location")
+            
+        return success and success2
+        
+    def test_create_advertisement(self):
+        """Test creating a new advertisement"""
+        ad_data = {
+            "title": f"Test Advertisement {datetime.now().strftime('%H%M%S')}",
+            "description": "A test advertisement created via API testing",
+            "image_url": "https://example.com/test-ad-image.jpg",
+            "link_url": "https://example.com/test-ad-link",
+            "placement": {
+                "location": "hero",
+                "description": "Hero banner on homepage"
+            },
+            "is_active": True
+        }
+        
+        success, response = self.run_test(
+            "Create Advertisement",
+            "POST",
+            "/api/admin/advertisements",
+            200,
+            data=ad_data
+        )
+        
+        if success and 'id' in response:
+            self.created_ad_id = response['id']
+            print(f"Created advertisement with ID: {self.created_ad_id}")
+            return True
+        return False
+        
+    def test_get_advertisement_by_id(self):
+        """Test getting a specific advertisement by ID"""
+        if not self.created_ad_id:
+            print("❌ No advertisement ID available to test")
+            return False
+            
+        success, response = self.run_test(
+            "Get Advertisement by ID",
+            "GET",
+            f"/api/advertisements/{self.created_ad_id}",
+            200
+        )
+        
+        if success:
+            print(f"Retrieved advertisement: {response['title']}")
+        return success
+        
+    def test_update_advertisement(self):
+        """Test updating an advertisement"""
+        if not self.created_ad_id:
+            print("❌ No advertisement ID available to test")
+            return False
+            
+        update_data = {
+            "title": "Updated Test Advertisement",
+            "description": "This advertisement has been updated via API testing",
+            "placement": {
+                "location": "offer_detail",
+                "description": "Offer detail page sidebar"
+            },
+            "is_active": False
+        }
+        
+        success, response = self.run_test(
+            "Update Advertisement",
+            "PUT",
+            f"/api/admin/advertisements/{self.created_ad_id}",
+            200,
+            data=update_data
+        )
+        
+        if success:
+            print(f"Updated advertisement title: {response['title']}")
+            if (response['title'] == update_data['title'] and 
+                response['description'] == update_data['description'] and
+                response['placement']['location'] == update_data['placement']['location'] and
+                response['is_active'] == update_data['is_active']):
+                print("✅ Advertisement update successful")
+                return True
+            else:
+                print("❌ Advertisement update may not have applied correctly")
+                return False
+        return False
+        
+    def test_toggle_advertisement_status(self):
+        """Test toggling advertisement active status"""
+        if not self.created_ad_id:
+            print("❌ No advertisement ID available to test")
+            return False
+            
+        # First, get the current status
+        success, ad = self.run_test(
+            "Get Advertisement Current Status",
+            "GET",
+            f"/api/advertisements/{self.created_ad_id}",
+            200
+        )
+        
+        if not success:
+            return False
+            
+        current_status = ad['is_active']
+        new_status = not current_status
+        
+        update_data = {
+            "is_active": new_status
+        }
+        
+        success, response = self.run_test(
+            "Toggle Advertisement Status",
+            "PUT",
+            f"/api/admin/advertisements/{self.created_ad_id}",
+            200,
+            data=update_data
+        )
+        
+        if success:
+            print(f"Changed advertisement status from {current_status} to {response['is_active']}")
+            if response['is_active'] == new_status:
+                print("✅ Advertisement status toggle successful")
+                return True
+            else:
+                print("❌ Advertisement status toggle may not have applied correctly")
+                return False
+        return False
+        
+    def test_delete_advertisement(self):
+        """Test deleting an advertisement"""
+        if not self.created_ad_id:
+            print("❌ No advertisement ID available to test")
+            return False
+            
+        success, response = self.run_test(
+            "Delete Advertisement",
+            "DELETE",
+            f"/api/admin/advertisements/{self.created_ad_id}",
+            200
+        )
+        
+        if success:
+            # Verify the advertisement is actually deleted
+            verify_success, _ = self.run_test(
+                "Verify Advertisement Deletion",
+                "GET",
+                f"/api/advertisements/{self.created_ad_id}",
+                404  # Should return 404 Not Found
+            )
+            
+            if verify_success:
+                print("✅ Advertisement successfully deleted")
+                return True
+            else:
+                print("❌ Advertisement may not have been deleted")
+                return False
+        return False
 
 def main():
     print("🌴 Starting Maldives Travel Offers API Tests 🌴")
