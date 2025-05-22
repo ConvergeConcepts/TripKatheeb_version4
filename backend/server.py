@@ -155,6 +155,38 @@ class TravelOfferUpdate(BaseModel):
     exclusions: Optional[List[str]] = None
     itinerary: Optional[str] = None
 
+# Advertisement Models
+class AdPlacement(BaseModel):
+    location: str
+    description: Optional[str] = None
+
+class AdvertisementBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    image_url: str
+    link_url: str
+    placement: AdPlacement
+    is_active: bool = True
+
+class AdvertisementCreate(AdvertisementBase):
+    pass
+
+class Advertisement(AdvertisementBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    
+    class Config(BaseConfig):
+        pass
+
+class AdvertisementUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    link_url: Optional[str] = None
+    placement: Optional[AdPlacement] = None
+    is_active: Optional[bool] = None
+
 # --- Helper Functions ---
 
 def verify_password(plain_password, hashed_password):
