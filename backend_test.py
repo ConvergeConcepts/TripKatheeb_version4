@@ -268,8 +268,19 @@ def main():
     print("\n📌 TESTING ADMIN ENDPOINTS")
     print("-" * 40)
     
+    # Create default admin if needed
+    try:
+        print("\n🔍 Creating default admin if needed...")
+        response = requests.post(f"{tester.base_url}/admin/create-default-admin")
+        if response.status_code == 200:
+            print("✅ Default admin created or already exists")
+        else:
+            print(f"⚠️ Could not create default admin: {response.text}")
+    except Exception as e:
+        print(f"⚠️ Error creating default admin: {str(e)}")
+    
     # Login as admin
-    if not tester.test_admin_login():
+    if not tester.test_admin_login(username="admin", password="admin123"):
         print("❌ Admin login failed, admin tests will be skipped")
         print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
         return 1
