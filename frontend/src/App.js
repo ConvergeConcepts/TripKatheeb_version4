@@ -918,6 +918,17 @@ const AdminDashboard = () => {
                   setShowAddForm(false);
                 }}
               />
+            ) : showEditForm ? (
+              <EditOfferForm
+                offerId={showEditForm}
+                onClose={() => setShowEditForm(null)}
+                onSuccess={(updatedOffer) => {
+                  setOffers(offers.map(offer => 
+                    offer.id === updatedOffer.id ? updatedOffer : offer
+                  ));
+                  setShowEditForm(null);
+                }}
+              />
             ) : (
               <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex justify-between items-center mb-6">
