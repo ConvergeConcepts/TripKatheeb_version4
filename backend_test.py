@@ -53,13 +53,34 @@ class MaldivesTravelAPITester:
 
     def test_admin_login(self, username="admin", password="password"):
         """Test admin login and get token"""
-        success, response = self.run_test(
-            "Admin Login",
-            "POST",
-            "admin/login",
-            200,
-            data={"username": username, "password": password}
-        )
+        # Using form data for login as required by OAuth2PasswordRequestForm
+        url = f"{self.base_url}/admin/login"
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        data = {
+            "username": username,
+            "password": password
+        }
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing Admin Login...")
+        
+        try:
+            response = requests.post(url, data=data, headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                response_data = response.json()
+                return success, response_data
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                print(f"Response: {response.text}")
+                return False, {}
+                
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
         if success and 'access_token' in response:
             self.token = response['access_token']
             print(f"✅ Successfully logged in as admin")
