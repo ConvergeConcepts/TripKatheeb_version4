@@ -517,24 +517,55 @@ const OfferDetail = () => {
       </div>
       
       {/* Additional Advertisement Section */}
-      <div className="mt-12 p-6 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg shadow-sm">
-        <div className="flex flex-col md:flex-row items-center justify-between">
-          <div className="mb-6 md:mb-0 md:mr-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Need Travel Insurance?
-            </h3>
-            <p className="text-gray-600">
-              Protect your journey with our comprehensive travel insurance. 
-              Coverage includes trip cancellation, medical emergencies, and more.
-            </p>
+      {!adLoading && detailAds.length > 0 && (
+        <div className="mt-12 p-6 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="mb-6 md:mb-0 md:mr-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                {detailAds[0].title}
+              </h3>
+              <p className="text-gray-600">
+                {detailAds[0].description}
+              </p>
+              <a 
+                href={detailAds[0].link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600"
+              >
+                Learn More
+              </a>
+            </div>
+            <img
+              src={detailAds[0].image_url}
+              alt={detailAds[0].title}
+              className="w-full md:w-72 h-36 object-cover rounded-lg"
+            />
           </div>
-          <img
-            src="https://images.unsplash.com/photo-1591086109278-374183e20696?q=80&w=1867&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Travel Insurance"
-            className="w-full md:w-72 h-36 object-cover rounded-lg"
-          />
         </div>
-      </div>
+      )}
+      
+      {/* Fallback Advertisement (if no ads available) */}
+      {(adLoading || detailAds.length === 0) && (
+        <div className="mt-12 p-6 bg-gradient-to-r from-blue-50 to-teal-50 rounded-lg shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div className="mb-6 md:mb-0 md:mr-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                Need Travel Insurance?
+              </h3>
+              <p className="text-gray-600">
+                Protect your journey with our comprehensive travel insurance. 
+                Coverage includes trip cancellation, medical emergencies, and more.
+              </p>
+            </div>
+            <img
+              src="https://images.unsplash.com/photo-1591086109278-374183e20696?q=80&w=1867&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              alt="Travel Insurance"
+              className="w-full md:w-72 h-36 object-cover rounded-lg"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
