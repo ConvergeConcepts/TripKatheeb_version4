@@ -656,10 +656,19 @@ const Home = () => {
 
 // Admin Login Component
 const AdminLogin = () => {
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      navigate("/admin/dashboard");
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -678,7 +687,7 @@ const AdminLogin = () => {
       });
 
       localStorage.setItem("accessToken", response.data.access_token);
-      window.location.href = "/admin/dashboard";
+      navigate("/admin/dashboard");
     } catch (error) {
       setError("Invalid username or password");
       console.error("Login error:", error);
