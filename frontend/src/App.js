@@ -1778,7 +1778,7 @@ function App() {
             </>
           } />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </div>
   );
 }
