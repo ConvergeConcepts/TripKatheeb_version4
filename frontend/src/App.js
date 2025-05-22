@@ -306,6 +306,14 @@ const OfferDetail = () => {
     );
   }
 
+  console.log("Rendering offer with:", {
+    highlights: offer.highlights, 
+    inclusions: offer.inclusions, 
+    exclusions: offer.exclusions,
+    itinerary: offer.itinerary,
+    contactInfo: offer.contact_info
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb Navigation */}
