@@ -1742,7 +1742,7 @@ const AddOfferForm = ({ onClose, onSuccess }) => {
 function App() {
   return (
     <div className="App min-h-screen bg-gray-50">
-      <BrowserRouter basename="/">
+      <HashRouter>
         <Routes>
           <Route
             path="/"
