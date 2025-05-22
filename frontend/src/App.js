@@ -571,8 +571,21 @@ const Home = () => {
         setLoading(false);
       }
     };
+    
+    const fetchHeroAds = async () => {
+      setAdLoading(true);
+      try {
+        const response = await axios.get(`${API}/advertisements?location=hero&active_only=true`);
+        setHeroAds(response.data);
+        setAdLoading(false);
+      } catch (error) {
+        console.error("Error fetching hero ads:", error);
+        setAdLoading(false);
+      }
+    };
 
     fetchOffers();
+    fetchHeroAds();
   }, [filters]);
 
   const handleFilterChange = (newFilters) => {
